@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using TweakBench.Core;
+using TweakBench.Notify;
 
 namespace TweakBench.App
 {
@@ -95,6 +96,23 @@ namespace TweakBench.App
             });
 
             step("search", () => { window.SearchFor("restart"); Settle(win); shot("20-search-restart"); window.SearchFor(""); });
+            step("search notifications", () => { window.SearchFor("notification"); Settle(win); shot("22-search-notification"); window.SearchFor(""); });
+            step("notification panel on", () =>
+            {
+                var host = new Window { Title = "Notification pop-ups (demo, on)" };
+                Theme.Attach(host, win);
+                var page = new System.Windows.Controls.StackPanel { Margin = new Thickness(24) };
+                page.Children.Add(NotificationPanel.BuildDemo(window.Ctx, true));
+                host.Content = page;
+                RenderDialog(host, 1000, 600, Path.Combine(folder, "45-notification-panel-on.png"), log);
+            });
+            step("notification chooser", () =>
+            {
+                var main = new MonitorInfo { Id = "demo", Device = @"\\.\DISPLAY3", Name = "DELL U2720Q", Bounds = new RectPx(0, 0, 3840, 2160), Work = new RectPx(0, 0, 3840, 2088), Dpi = 144, Primary = true, Number = 3 };
+                var chooser = new NotificationPlacementWindow(window.Ctx, new List<MonitorInfo> { main }, 0, 0);
+                chooser.ShowSpot(NotificationPlacement.Preset("top-center", main));
+                RenderDialog(chooser.Window, 340, 176, Path.Combine(folder, "46-notification-chooser.png"), log);
+            });
             step("history", () => { window.Navigate("history"); Settle(win); shot("21-history"); });
             step("profiles", () => ShowProfiles(window, win, shot));
             foreach (string id in new[] { "apps", "install", "features", "repair" })

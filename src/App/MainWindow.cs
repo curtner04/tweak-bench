@@ -518,6 +518,7 @@ namespace TweakBench.App
             Navigate(id);
             if (!SkipAutoRefresh) Model.Refresh(false);
             UpdatePendingBar();
+            NotificationPanel.EnsureOnStart(Ctx);
         }
 
         /// <summary>Selects a page by id ("home", a category id, "apps", "install", "features", "repair", "history").</summary>

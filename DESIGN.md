@@ -41,7 +41,9 @@ This file is a development guide; it is not shipped.
 src\Core      engine and contracts (no WPF): Model, Changes, ISystem, Catalog, Engine, History, Storage, ProcessRunner,
               RealSystem, MemorySystem, RestorePoint, SystemInfo, Audit
 src\Catalog   the tweaks, one file per category (partial methods of Catalog)
+src\Notify    notification pop-up positioning (no WPF; compiled into the app, the helper and the tests)
 src\Tools     non-UI logic for the tool pages: built-in apps, winget catalog, Windows features, repair tasks, DNS, legacy panels
+helper        entry point of Tweak Bench Notifications.exe (outside src so the app build sees one Main)
 src\App       WPF shell and pages (excluded from the test build)
 tests         headless tests (TestRunner.cs finds every static class named *Tests with `public static void Run(T t)`)
 ```
@@ -242,6 +244,49 @@ Behaviour:
 - **DNS** (`DnsPanel`, top of the Network page): current DNS per active adapter; choose Automatic (DHCP), Cloudflare, Cloudflare
   malware blocking, Google, Quad9, AdGuard, OpenDNS; apply to all active adapters (admin) and keep the previous servers so the
   change can be undone.
+
+## Notification pop-up position (src\Notify, helper)
+
+No Windows setting or API positions toast pop-ups, so a separate helper moves the window after Windows places it.
+
+- **Helper.** `Tweak Bench Notifications.exe` is built by `Build.ps1` from `src\Core` + `src\Notify` + `helper\*.cs` plus a version
+  source generated into the build stage from `src\App\Release.cs` (so its version always equals the app's). No WPF, no window,
+  the same `app.manifest` (PerMonitorV2, asInvoker); it runs NOT elevated. The app starts it for an elevated caller through
+  `NormalRights.Start` (borrowed normal token, as for the File Explorer restart).
+- **Identification.** On the tested Windows 11 build every pop-up is one persistent top-level window of `ShellExperienceHost.exe`,
+  class `Windows.UI.Core.CoreWindow`, title "New notification". It is not returned by `EnumWindows` (shell z-order band), so it is
+  found with `FindWindowEx` loops, the owning process image name and the title (`ToastWindow`). When idle it is visible but
+  DWM-cloaked with zero height; a pop-up uncloaks it and gives it a height. Titles for other display languages are learned from a
+  test notification and kept in `AppSettings.NotificationTitles`.
+- **Hooks.** `SetWinEventHook` (out of context, skip own process) on `EVENT_OBJECT_SHOW`..`LOCATIONCHANGE` and
+  `CLOAKED`..`UNCLOAKED`, limited to the ShellExperienceHost process of this session; the process is re-resolved every few seconds
+  and the window is always re-found, never cached. A slow poll is a safety net. A loop guard allows at most 12 moves per
+  appearance (the shell re-places the window when content changes).
+- **Spot model.** `NotificationSpot` anchors the visible card, not the window: monitor id (device interface path, stable across
+  restarts) with the device name as fallback, horizontal anchor (left/center/right), vertical anchor (top/bottom) and offsets in
+  DIPs from the work area. The card sits inside the window with transparent margins (insets 16/30/16/14 DIPs). `NotificationPlacement`
+  is pure and unit-tested: `SpotFromCard`, `CardRect` (clamped inside the work area), `TargetWindowRect`, `Resolve`, `Preset`,
+  `Describe`. A spot on a missing screen falls back to the main screen.
+- **Layout and DPI (measured live on 26H2).** Rectangles are physical pixels (the helper thread is PerMonitorV2). The shell
+  draws the card (or a stack of cards) at the window's bottom-left corner, 16 DIPs in from the left and 14 DIPs up from the bottom,
+  at the DPI of the monitor the window is on, and keeps the content's pixel height when the window is resized: a shorter window
+  cuts the card off (tried both in one step and after the move). So the helper measures the card where the shell placed it
+  (`CardSizeDip`; it waits up to 400 ms for the fully grown pop-up in the corner), never changes the window height, and places the
+  window by the card's bottom-left. On a monitor with another DPI the card is redrawn at that monitor's scale inside a window
+  that is too wide; the width is trimmed to the card plus its side margins (the transparent rest still catches clicks), and
+  trimming stops for the session if the shell sets the width back within 300 ms. The transparent band above the card (about
+  115 px on a 100% screen when the main screen is 150%) cannot be trimmed and catches clicks while the pop-up shows.
+- **Status file.** `logs\notifications-status.json` (machine-local, written atomically, at most once per second): pid, version,
+  exe path, state (moving, waiting, off, stopped, error), moved count, last pop-up title and rectangles, last error. The app reads
+  it for the status line and compares the helper's version and path with its own. `logs\notifications.log` rotates at 256 KB.
+- **Control.** Named objects in the user's session: mutex `Local\TweakBench.Notifications` (single instance) and events
+  `Local\TweakBench.Notifications.Reload` and `.Quit`, created with an ACL for the same user so an elevated app can signal them.
+  Reload makes it re-read `settings.json` (it also notices file changes). On quit a visible pop-up is moved back to the main
+  screen's bottom-right corner.
+- **Run value.** `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Tweak Bench Notifications` = the quoted helper path. Written when
+  the option is turned on, removed when it is turned off; on every app start the app repairs the value and restarts a helper that
+  is old or runs from another path (this also restores the feature after Export / import on a new PC). The installer's uninstaller
+  removes the value and stops the helper.
 
 ## Testing
 

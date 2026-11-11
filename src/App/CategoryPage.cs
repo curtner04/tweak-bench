@@ -7,7 +7,7 @@ using TweakBench.Core;
 
 namespace TweakBench.App
 {
-    /// <summary>One page of tweaks (a <see cref="Category"/> of the catalog). The Network page also shows the DNS chooser at the top.</summary>
+    /// <summary>One page of tweaks (a <see cref="Category"/> of the catalog). The Network page also shows the DNS chooser at the top, and System &amp; desktop the notification pop-up mover.</summary>
     public sealed class CategoryPage : PageBase, IHeaderActions
     {
         readonly Category category;
@@ -73,6 +73,11 @@ namespace TweakBench.App
             {
                 FrameworkElement dns = DnsPanel.Build(Ctx);
                 if (dns != null) { root.Children.Add(dns); dns.Margin = new Thickness(dns.Margin.Left, dns.Margin.Top, dns.Margin.Right, Math.Max(dns.Margin.Bottom, 14)); }
+            }
+            if (category.Id == "system")
+            {
+                FrameworkElement notify = NotificationPanel.Build(Ctx);
+                if (notify != null) root.Children.Add(notify);
             }
             summary = Ui.Para("", "Muted", 12.5);
             summary.Margin = new Thickness(2, 0, 0, 12);

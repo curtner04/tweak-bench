@@ -16,6 +16,7 @@ namespace TweakBench.App
         StackPanel list;
         string query = "";
         int found, hiddenAdvanced;
+        bool offerNotifications;
 
         public SearchPage(UiContext ctx, TweakModel model) : base(ctx) { this.model = model; }
 
@@ -27,6 +28,7 @@ namespace TweakBench.App
             get
             {
                 if (string.IsNullOrWhiteSpace(query)) return "Type in the search box to find a tweak by what it does.";
+                if (found == 0 && offerNotifications) return "Notification pop-ups can be moved on the System & desktop page.";
                 if (found == 0) return "No tweak matches \"" + query.Trim() + "\".";
                 return found + (found == 1 ? " tweak matches" : " tweaks match") + " \"" + query.Trim() + "\".";
             }
@@ -67,9 +69,13 @@ namespace TweakBench.App
                 matches = ranked.OrderBy(r => r.Key).Select(r => r.Value).ToList();
             }
             found = matches.Count;
+            // Moving notification pop-ups is a panel, not a tweak, so it is offered as its own result.
+            offerNotifications = words.Length > 0 && words.All(w => NotificationPanel.SearchWords.Any(k => k.Contains(w)))
+                && words.Any(w => w.Length >= 4 && new[] { "notification", "pop-up", "popup", "toast", "banner", "alert" }.Any(k => k.Contains(w) || k == w.TrimEnd('s')));
 
             list.Children.Clear();
             cards.Clear();
+            if (offerNotifications) list.Children.Add(NotificationResult());
             foreach (Tweak t in matches.Take(MaxResults))
             {
                 var card = new TweakCard(Ctx, model, t, true);
@@ -87,8 +93,24 @@ namespace TweakBench.App
                 row.Children.Add(show);
                 list.Children.Add(row);
             }
-            if (found == 0 && words.Length > 0 && hiddenAdvanced == 0)
+            if (found == 0 && words.Length > 0 && hiddenAdvanced == 0 && !offerNotifications)
                 list.Children.Add(Ui.Note("Try a shorter or different word, for example \"restart\", \"ads\", \"taskbar\" or \"dns\".", "Info"));
+        }
+
+        FrameworkElement NotificationResult()
+        {
+            var text = new StackPanel();
+            text.Children.Add(Ui.Text("Notification pop-ups", "Text", true, 14));
+            var blurb = Ui.Para("Move Windows notification pop-ups to any spot on any screen, instead of the bottom-right corner, so they stay out of your way.", "Muted", 12.5);
+            blurb.Margin = new Thickness(0, 3, 0, 0);
+            text.Children.Add(blurb);
+            var open = Ui.Button("Open System & desktop", () => Ctx.Navigate("system"), "Small");
+            open.HorizontalAlignment = HorizontalAlignment.Left;
+            open.Margin = new Thickness(0, 10, 0, 0);
+            text.Children.Add(open);
+            var card = Ui.Card(text);
+            card.Margin = new Thickness(0, 0, 0, 10);
+            return card;
         }
 
         void Refresh()

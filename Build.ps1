@@ -1,4 +1,4 @@
-# Builds Tweak Bench.exe with the Roslyn C# compiler against .NET Framework 4.8 (inbox on every Windows 10/11 PC).
+# Builds Tweak Bench.exe (and the small helper Tweak Bench Notifications.exe) with the Roslyn C# compiler against .NET Framework 4.8 (inbox on every Windows 10/11 PC).
 #   powershell -NoProfile -ExecutionPolicy Bypass -File Build.ps1                          app into this folder
 #   powershell -NoProfile -ExecutionPolicy Bypass -File Build.ps1 -OutputDirectory build\out
 #   powershell -NoProfile -ExecutionPolicy Bypass -File Build.ps1 -OutputDirectory build\out -Test
@@ -80,11 +80,36 @@ Invoke-Roslyn 'Tweak Bench' (@('-target:winexe', ('-win32manifest:' + (Join-Path
 $target = Join-Path $OutputDirectory $exeName
 Install-Binary $candidate $target $stage
 
+# --- the notification helper -----------------------------------------------------------------------
+# "Tweak Bench Notifications.exe": no WPF, no window. Core + Notify + helper sources, plus a version/attributes source generated
+# here from src\App\Release.cs so its version always equals the app's. It sits next to the app exe (and in the project root).
+$releaseText = Get-Content -LiteralPath (Join-Path $src 'App\Release.cs') -Raw
+$versionMatch = [regex]::Match($releaseText, 'class Release[^{]*\{\s*public const string Version\s*=\s*"(\d+\.\d+\.\d+)"')
+if (-not $versionMatch.Success) { throw 'src\App\Release.cs: Release.Version was not found.' }
+$helperVersion = $versionMatch.Groups[1].Value
+$helperName = 'Tweak Bench Notifications.exe'
+$helperStage = New-Stage
+$helperCandidate = Join-Path $helperStage $helperName
+$helperAttributes = Join-Path $helperStage 'HelperVersion.g.cs'
+@"
+using System.Reflection;
+
+[assembly: AssemblyVersion("$helperVersion")]
+[assembly: AssemblyFileVersion("$helperVersion")]
+[assembly: AssemblyInformationalVersion("$helperVersion")]
+"@ | Set-Content -LiteralPath $helperAttributes -Encoding UTF8
+$helperSources = @('Core', 'Notify' | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $src $_) -Filter '*.cs' -File -Recurse | ForEach-Object FullName })
+$helperSources += @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'helper') -Filter '*.cs' -File | ForEach-Object FullName)
+$helperSources += $helperAttributes
+Invoke-Roslyn 'Tweak Bench Notifications' (@('-target:winexe', ('-win32manifest:' + (Join-Path $PSScriptRoot 'app.manifest')), ('-out:' + $helperCandidate)) + $iconArgument + $references + $helperSources)
+$helperTarget = Join-Path $OutputDirectory $helperName
+Install-Binary $helperCandidate $helperTarget $helperStage
+
 if ($OutputDirectory -ne $PSScriptRoot) {
     foreach ($item in @('assets', 'README.md', 'CHANGELOG.md', 'Tweak Bench.exe.config')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $item) -Destination $OutputDirectory -Recurse -Force }
 }
 Copy-TransferHelper -Destination $OutputDirectory -App $cleanupName
-Write-Output "Built app: $target. Installer files were not changed."
+Write-Output "Built app: $target and $helperTarget. Installer files were not changed."
 # Project rule (2026-11-11): the project-root exe is always the latest build, so a build into any other
 # folder also rebuilds C:\dev\Windows\Tweak Bench.exe. Queue stages are skipped by the helper itself. TB_STAGE_ROOT builds
 # (several agents compiling in parallel) skip it; whoever finishes such a batch builds the root once with plain Build.ps1.

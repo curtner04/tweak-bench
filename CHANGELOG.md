@@ -1,5 +1,12 @@
 # Tweak Bench changelog
 
+## 1.1.0 - 2026-11-11
+
+- New: **Notification pop-ups** on the System & desktop page. Windows always shows notification pop-ups in the bottom-right corner of your main screen. Tweak Bench can now put them at any spot on any screen: use a quick spot (top left, top centre, top right, bottom left, bottom centre, bottom right) or drag a card to exactly where you want it.
+- A small helper, **Tweak Bench Notifications**, does the moving. It runs quietly in the background without administrator rights and starts when you sign in. Turn the option off and it is removed from sign-in and stopped, and Windows places pop-ups itself again; nothing in Windows is changed.
+- A **Send a test notification** button shows a sample pop-up so you can see the spot. It also learns the pop-up's name for other display languages.
+- Limits: a pop-up can flash in the corner for a moment before it moves; its see-through edge still catches clicks while it shows (a taller edge on a screen with other scaling than the main screen); pop-ups that apps draw themselves are not moved; and with Do Not Disturb on Windows shows no pop-ups at all. It works with the current Windows 11 design and may need an update if Windows changes it.
+
 ## 1.0.0 - 2026-11-11
 
 - First release: Windows power-user tweaks explained in plain English, in the spirit of WinUtil but easy to follow.

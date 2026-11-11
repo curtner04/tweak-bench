@@ -37,7 +37,7 @@ Start with **Start here**: the highlighted card is **Stop automatic restarts for
 | Start, taskbar & search (25) | Widgets, Task View, search box, alignment, End task, Start recommendations, web results in search, lock-screen tips, suggested apps and nags |
 | File Explorer (20) | File extensions, hidden files, open to This PC, Home clean-up, classic right-click menu, OneDrive ads, long paths |
 | Performance & gaming (14) | Power plans, hibernation, Fast Startup, Game Bar recording, GPU scheduling, mouse acceleration, animations, sleep and USB power |
-| System & desktop (13) | Dark mode, accessibility shortcut pop-ups, Num Lock, sign-in status messages, crash screen details, snapping and other everyday settings |
+| System & desktop (13 + pop-up position) | Notification pop-up position (put pop-ups anywhere on any screen), dark mode, accessibility shortcut pop-ups, Num Lock, sign-in status messages, crash screen details, snapping and other everyday settings |
 | Network (4 + DNS) | DNS provider for all connected adapters (with undo), Teredo, IPv4 preference, LLMNR |
 | Background services (6) | Optional services many people never use (Advanced ones are hidden until you turn on "Show advanced tweaks") |
 | Remove built-in apps | A curated list of removable inbox and Store apps with what each one is; removal for your account, optionally for new accounts too |
@@ -45,6 +45,29 @@ Start with **Start here**: the highlighted card is **Stop automatic restarts for
 | Windows features | Windows Sandbox, Hyper-V, WSL, .NET 3.5, SMB 1.0 and other optional features, enabled or disabled with DISM (no automatic restart) |
 | Repair & tools | System File Checker, DISM repair and clean-up, Windows Update reset, network reset, DNS flush, temporary files, restore point, File Explorer restart, and 27 classic Windows tools |
 | History | Every change with its previous values, undo per change or per batch, and saved profiles |
+
+## Notification pop-up position
+
+Windows shows notification pop-ups in the bottom-right corner of your main screen and has no setting to move them. On
+**System & desktop**, the **Notification pop-ups** panel moves them to any spot on any screen: pick a quick spot (top left,
+top centre, top right, bottom left, bottom centre, bottom right) or **Choose a spot on any screen** and drag a card to where
+you want pop-ups to appear. **Send a test notification** shows a sample.
+
+A small helper, `Tweak Bench Notifications.exe`, does the moving. It has no window, runs without administrator rights, starts
+when you sign in (a `Tweak Bench Notifications` value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`) and watches for
+the Windows pop-up window, moving it to your spot each time Windows places it. To turn it off, switch **Move notification
+pop-ups** off: the sign-in value is removed, the helper stops and Windows places pop-ups itself again. Nothing in Windows is
+changed.
+
+Limits:
+
+- A pop-up can flash in the corner for a moment before it moves.
+- The Windows pop-up window has a transparent edge that still catches mouse clicks while the pop-up shows. On a screen with a
+  different scaling than your main screen (for example 100% next to a 150% main screen) that edge above the card is taller, about
+  the height of the card itself.
+- Pop-ups that an app draws itself (instead of Windows) are not moved.
+- With Do Not Disturb on, Windows shows no pop-ups at all.
+- It works with the current Windows 11 design of pop-ups and may need an update if Windows changes it.
 
 ## Administrator rights
 
@@ -82,7 +105,8 @@ installed apps and Windows features are not repeated automatically.
 
 ## Building and testing
 
-- `powershell -NoProfile -ExecutionPolicy Bypass -File Build.ps1` builds `Tweak Bench.exe` here (Roslyn from
+- `powershell -NoProfile -ExecutionPolicy Bypass -File Build.ps1` builds `Tweak Bench.exe` and the helper
+  `Tweak Bench Notifications.exe` here (Roslyn from
   `C:\dev\Toolchains\VS2022`, .NET Framework 4.8). `-OutputDirectory <folder>` builds elsewhere and also refreshes the exe
   here; `-Test` also builds `TweakBench.Tests.exe`.
 - The build also compiles a few shared sources (`AppRestart.cs`, `SingleInstance.cs`, `ConfigurationTransfer.cs`,
@@ -93,4 +117,6 @@ installed apps and Windows features are not repeated automatically.
 - Installers are made only by the 4:00 AM Daily App Installer Queue (`C:\dev\App Maintenance`, app code **TB**).
 - `DESIGN.md` describes the architecture, catalog rules and file layout.
 
-Data: `%LOCALAPPDATA%\Tweak Bench\data` (transferred) and `%LOCALAPPDATA%\Tweak Bench\logs` (this PC only).
+Data: `%LOCALAPPDATA%\Tweak Bench\data` (transferred; `settings.json` also holds the notification option, spot and learned pop-up
+names) and `%LOCALAPPDATA%\Tweak Bench\logs` (this PC only; includes `notifications.log` and `notifications-status.json`
+from the helper).
