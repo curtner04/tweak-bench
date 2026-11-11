@@ -6,6 +6,14 @@ undo. It is in the spirit of Chris Titus Tech's WinUtil, built to be easy to fol
 **Tweak Bench never restarts your PC.** When a change needs a restart, sign-out or File Explorer restart, it says so and
 leaves the timing to you.
 
+## Download
+
+[**Download Tweak Bench for Windows**](https://github.com/curtner04/tweak-bench-downloads/releases/latest/download/TB-Setup.exe)
+(64-bit Windows 11) · [release history](https://github.com/curtner04/tweak-bench-downloads/releases)
+
+The installer puts Tweak Bench in your user profile without asking for administrator rights; Tweak Bench itself asks when it
+opens. If the link says "Not Found", the first installer has not been published yet.
+
 ## How it works
 
 1. **See what is set.** Every tweak is a card with a plain title, one sentence on what it does, a "Why" line, a risk badge
